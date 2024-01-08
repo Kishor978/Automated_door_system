@@ -1,66 +1,77 @@
-#Script to train the model for face recognition
-
-import os,pickle,numpy as np
-from PIL import Image    #PIL is Python Image Library
+# import the required libraries
 import cv2
-
-face_cascade=cv2.CascadeClassifier('haarcascade_frontalface_default.xml')
-
-# print(os.getcwd())
-BASE_DIR=os.path.dirname(os.path.abspath(__file__))  #storing the current directory path(C:\Users\amals\PycharmProjects\Face_recogn)
-# print(BASE_DIR)
-# print(os.path.abspath(__file__))  # C:\Users\amals\PycharmProjects\Face_recogn\faces_train.py
-image_dir=os.path.join(BASE_DIR,'images')  # C:\Users\amals\PycharmProjects\Face_recogn\images
-# print(image_dir)
-
-image_id=0
-label_id={}
-y_train_label=[]
-x_train_data=[]
-
-#To see the images in images dir
-for root,dirs,files in os.walk(image_dir):
-    print(root,dirs,files)
-    for file in files:
-        print("FILES : ",file)
-        if(file.endswith('png') or file.endswith('jpg')):
-            path=os.path.join(root,file)
-            label=os.path.basename(root).replace(' ','_').lower()
-            # print(label)   #the name of the folder w.r.t images 
-            # print(path)    #verify this image ,convert in to a numpy array and turn to grayscale.
-            if(label not in label_id):  #Assinging numbers to labels(LabelEncoding)
-                label_id[label]=image_id
-                image_id+=1
+import os
+import numpy as np
+from PIL import Image
+import pickle
 
 
+cascade = cv2.CascadeClassifier("haarcascade_frontalface_alt2.xml")
 
-            pil_image=Image.open(path).convert('L')  #Coverting into grayscale.
-            #Resizing the image for better accuracy.
-            size=(400,533)
-            final_image=pil_image.resize(size,Image.ANTIALIAS)
+recognise = cv2.face.LBPHFaceRecognizer_create()
 
-            image_array=np.array(final_image)  #Convert the gray_scale image into an array of pixels.
-            # print(image_array)
+# Created a function 
+def getdata():
 
-            faces = face_cascade.detectMultiScale(image_array, scaleFactor=1.2, minNeighbors=5)
-            for (x,y,w,h) in faces:
-              roi_gray = image_array[y:y + h, x:x + w]    #Pixel values of the face region.
-                # img_name = 'FORFUN.png'
-                # cv2.imwrite(img_name, roi_gray)
-            y_train_label.append(label_id[label])         #Appending the label number
-            x_train_data.append(roi_gray)               #Appending the pixel values of the label face
+    current_id = 0
+    label_id = {} #dictionanary
+    face_train = [] # list
+    face_label = [] # list
+    
+    # Finding the path of the base directory i.e path were this file is placed
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
+    # We have created "image_data" folder that contains the data so basically
+    # we are appending its path to the base path
+    my_face_dir = os.path.join(BASE_DIR,'images')
 
-print(y_train_label)
-# print(x_train_data)
-print(label_id)
+    # Finding all the folders and files inside the "image_data" folder
+    for root, dirs, files in os.walk(my_face_dir):
+        for file in files:
 
-#Using Pickle to save label_id
-with open('labels.pickle','wb') as fw:
-    pickle.dump(label_id,fw)
+            # Checking if the file has extention ".png" or ".jpg"
+            if file.endswith("png") or file.endswith("jpg"):
 
+                # Adding the path of the file with the base path
+                # so you basically have the path of the image 
+                path = os.path.join(root, file)
 
-#Training the OpenCV recognizer
-recognizer=cv2.face.LBPHFaceRecognizer_create()
-recognizer.train(x_train_data,np.array(y_train_label))
-recognizer.save('trainner.yml')
+                # Taking the name of the folder as label i.e his/her name
+                label = os.path.basename(root).lower()
+
+                # providing label ID as 1 or 2 and so on for different persons
+                if not label in label_id:
+                    label_id[label] = current_id
+                    current_id += 1
+                ID = label_id[label]
+
+                # converting the image into gray scale image
+                # you can also use cv2 library for this action
+                pil_image = Image.open(path).convert("L")
+
+                # converting the image data into numpy array
+                image_array = np.array(pil_image, "uint8")
+        
+                # identifying the faces
+                face = cascade.detectMultiScale(image_array)
+
+                # finding the Region of Interest and appending the data
+                for x,y,w,h in face:
+                    img = image_array[y:y+h, x:x+w]
+                #image_array = cv2.rectangle(image_array,(x,y),(x+w,y+h),(255,255,255),3)
+                    cv2.imshow("Test",img)
+                    cv2.waitKey(1)
+                    face_train.append(img)
+                    face_label.append(ID)
+
+    # string the labels data into a file
+    with open("labels.pickle", 'wb') as f:
+        pickle.dump(label_id, f)
+   
+
+    return face_train,face_label
+
+# creating ".yml" file
+face,ids = getdata()
+recognise.train(face, np.array(ids))
+recognise.save("trainner.yml")

@@ -1,0 +1,8 @@
+comtypes==1.2.1
+numpy==1.26.3
+opencv-python==4.9.0.80
+pypiwin32==223
+pyserial==3.5
+pyttsx3==2.90
+pywin32==306
+pillow
